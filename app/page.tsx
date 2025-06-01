@@ -1,103 +1,123 @@
-import Image from "next/image";
+import Header from "@/components/navbar/header";
+import MovieBanner from "@/components/banner/movie-banner";
+import { MovieRow } from "@/components/movie-row";
+ 
+// Type definitions for better type safety
+interface Movie {
+  id: number;
+  title: string;
+  backdrop_path: string;
+  overview: string;
+  poster_path: string;
+  release_date: string;
+  vote_average: number;
+  vote_count: number; 
+}
 
-export default function Home() {
+interface Video {
+  id: string;
+  key: string;
+  site: string;
+  type: string; 
+}
+
+interface MovieListResponse {
+  results: Movie[]; 
+}
+
+// Centralized API configuration
+const TMDB_API = {
+  baseUrl: "https://api.themoviedb.org/3",
+  defaultParams: {
+    api_key: process.env.TMDB_API_KEY,
+    language: "en-US",
+    region: "US",
+  },
+};
+// Generic fetch function with error handling
+async function fetchMovies(
+  endpoint: string,
+  params = {}
+): Promise<MovieListResponse> {
+  const url = new URL(`${TMDB_API.baseUrl}/${endpoint}`);
+  const searchParams = new URLSearchParams({
+    ...TMDB_API.defaultParams,
+    api_key: TMDB_API.defaultParams.api_key || "",
+    ...params,
+  });
+  url.search = searchParams.toString();
+
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`Failed to fetch ${endpoint}:`, error);
+    return { results: [] };
+  }
+}
+
+// Specific movie fetchers
+async function getNowPlayingMovies(): Promise<MovieListResponse> {
+  return fetchMovies("movie/now_playing", { page: "1" });
+}
+
+async function getTopRatedMovies(): Promise<MovieListResponse> {
+  return fetchMovies("movie/top_rated", { page: "1" });
+}
+
+async function getPopularMovies(): Promise<MovieListResponse> {
+  return fetchMovies("movie/popular", { page: "1" });
+}
+
+async function getUpcomingMovies(): Promise<MovieListResponse> {
+  return fetchMovies("movie/upcoming", { page: "1" });
+}
+
+async function getMovieTrailer(movieId: number): Promise<Video | undefined> {
+  const data = await fetchMovies(`movie/${movieId}/videos`);
+  return (data.results as unknown as Video[])?.find(
+    (vid: Video) => vid.site === "YouTube" && vid.type === "Trailer"
+  );
+}
+
+export default async function Home() {
+  // Fetch all data in parallel
+  const [nowPlaying, topRated, popular, upcoming] = await Promise.all([
+    getNowPlayingMovies(),
+    getTopRatedMovies(),
+    getPopularMovies(),
+    getUpcomingMovies(),
+  ]);
+
+  // Get random featured movie
+  const featuredMovie =
+    nowPlaying.results[Math.floor(Math.random() * nowPlaying.results.length)];
+  const trailer = featuredMovie
+    ? await getMovieTrailer(featuredMovie.id)
+    : undefined;
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-black text-white">
+      <Header />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+      <main className="space-y-12 pb-20">
+        {featuredMovie && (
+          <MovieBanner
+            id={featuredMovie.id}
+            backdrop_path={featuredMovie.backdrop_path}
+            title={featuredMovie.title}
+            overview={featuredMovie.overview}
+            trailerKey={trailer?.key}
+          />
+        )}
+
+        <section className="  px-4 sm:px-6 space-y-8">
+          <MovieRow title="Top Rated" movies={topRated.results} />
+          <MovieRow title="Popular" movies={popular.results} />
+          <MovieRow title="Upcoming" movies={upcoming.results} />
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
