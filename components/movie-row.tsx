@@ -1,12 +1,11 @@
 // components/movie-row.tsx
 'use client';
-
-import { Movie } from '@/types';
+import type { Movie } from '@/lib/generated/prisma'; 
 import { MovieCard } from './movie-card';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef } from 'react';
-
-export function MovieRow({ title, movies }: { title: string; movies: Movie[] }) {
+ 
+export function MovieRow({ title, movies }: { title: string; movies: Movie[]}) {
   const rowRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -50,9 +49,9 @@ export function MovieRow({ title, movies }: { title: string; movies: Movie[] }) 
           ref={rowRef}
           className="flex space-x-4 overflow-x-scroll scrollbar-hide px-4 md:px-8 py-2"
         >
-          {movies.map((movie) => (
+          {movies.map((movie : Movie) => (
             <div key={movie.id} className="flex-none">
-              <MovieCard movie={movie} />
+              <MovieCard movie = {movie} />
             </div>
           ))}
         </div>

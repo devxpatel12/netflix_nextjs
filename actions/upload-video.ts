@@ -8,8 +8,8 @@ const uploadVideoSchema = z.object({
     movieName: z.string().min(1, "Movie name is required"),
     description: z.string().min(1, "Description is required"),
     category: z.string().min(1, "Category is required"),
-    thumbnailUrl: z.string().min(1, "Thumbnail url is required"),
-    videoUrl: z.string().min(1, "video url is required"),
+    thumbnailUrl: z.string().optional(),
+    videoUrl: z.string().min(1, "Video url is required"),
 })
 
 type UploadVideoFormState = {

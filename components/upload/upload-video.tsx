@@ -48,7 +48,7 @@ export default function Upload({ setVideoUrl, setThumbnailUrl }: IKUploadProps) 
       setVideoUrl(res.url);
     }
     if(setThumbnailUrl && res.thumbnailUrl) {
-      setThumbnailUrl(res.thumbnailUrl);
+      setThumbnailUrl(res.url);
     }
     setUploadProgress(100);
     setError(null);
